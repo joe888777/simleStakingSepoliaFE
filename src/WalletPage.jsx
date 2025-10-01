@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ThirdwebProvider, ConnectWallet, useAddress, useSDK } from '@thirdweb-dev/react';
 import { ethers } from 'ethers';
-import { SimpleStakeContractAddress, AMGTContractAddress, USDCTContractAddress } from './setting';
-import { deposit, stake, withdraw, swap, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited } from './contract/SimpleStaking';
+import { AMGTContractAddress, USDCTContractAddress, SimpleStakeContractAddress } from './setting';
+import { deposit, stake, withdraw, swap, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited, stakeWithPermit, swapWithPermit } from './contract/SimpleStaking';
 import { approve } from './contract/erc20';
 
 // Your smart contract configuration
@@ -22,7 +22,7 @@ function WalletInteraction() {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // SimpleStaking states
+  // Staking states
   const [stakeAmount, setStakeAmount] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -116,7 +116,7 @@ function WalletInteraction() {
     }
   };
 
-  // Stake tokens
+  // Staking handlers
   const handleStake = async () => {
     if (!sdk || !stakeAmount) return;
 
@@ -125,11 +125,8 @@ function WalletInteraction() {
       const signer = await sdk.getSigner();
       const amountWei = ethers.utils.parseEther(stakeAmount);
 
-      // First approve AMGT token for staking contract
-      await approve(AMGTContractAddress, SimpleStakeContractAddress, amountWei, signer);
-
-      // Then stake
-      await stake(SimpleStakeContractAddress, amountWei, signer);
+      // Use permit for single signature approval + stake
+      await stakeWithPermit(SimpleStakeContractAddress, AMGTContractAddress, amountWei, signer);
 
       alert('Stake successful!');
       setStakeAmount('');
@@ -142,7 +139,6 @@ function WalletInteraction() {
     }
   };
 
-  // Deposit tokens
   const handleDeposit = async () => {
     if (!sdk || !depositAmount) return;
 
@@ -151,10 +147,8 @@ function WalletInteraction() {
       const signer = await sdk.getSigner();
       const amountWei = ethers.utils.parseEther(depositAmount);
 
-      // First approve AMGT token for staking contract
+      // Deposit uses approve method (no depositWithPermit in contract)
       await approve(AMGTContractAddress, SimpleStakeContractAddress, amountWei, signer);
-
-      // Then deposit
       await deposit(SimpleStakeContractAddress, amountWei, signer);
 
       alert('Deposit successful!');
@@ -168,7 +162,6 @@ function WalletInteraction() {
     }
   };
 
-  // Withdraw tokens
   const handleWithdraw = async () => {
     if (!sdk || !withdrawAmount) return;
 
@@ -176,9 +169,6 @@ function WalletInteraction() {
     try {
       const signer = await sdk.getSigner();
       const amountWei = ethers.utils.parseEther(withdrawAmount);
-
-      // Approve AMGT token for staking contract before withdrawal
-      await approve(AMGTContractAddress, SimpleStakeContractAddress, amountWei, signer);
 
       await withdraw(SimpleStakeContractAddress, amountWei, signer);
 
@@ -193,7 +183,6 @@ function WalletInteraction() {
     }
   };
 
-  // Swap tokens
   const handleSwap = async () => {
     if (!sdk || !swapAmount) return;
 
@@ -202,11 +191,8 @@ function WalletInteraction() {
       const signer = await sdk.getSigner();
       const amountWei = ethers.utils.parseEther(swapAmount);
 
-      // First approve USDCT token for staking contract
-      await approve(USDCTContractAddress, SimpleStakeContractAddress, amountWei, signer);
-
-      // Then swap
-      await swap(SimpleStakeContractAddress, amountWei, signer);
+      // Use permit for single signature approval + swap
+      await swapWithPermit(SimpleStakeContractAddress, USDCTContractAddress, amountWei, signer);
 
       alert('Swap successful!');
       setSwapAmount('');
@@ -269,7 +255,7 @@ function WalletInteraction() {
 
       {address && (
         <div style={styles.stakingSection}>
-          <h2>SimpleStaking</h2>
+          <h2>Staking</h2>
 
           <div style={styles.balanceGrid}>
             <div style={styles.balanceCard}>
@@ -418,9 +404,9 @@ const styles = {
   },
   stakingSection: {
     padding: '20px',
-    border: '2px solid #28a745',
+    border: '2px solid #007bff',
     borderRadius: '8px',
-    backgroundColor: '#f8fff9',
+    backgroundColor: '#f0f8ff',
   },
   balanceGrid: {
     display: 'grid',

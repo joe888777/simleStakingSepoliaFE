@@ -1,8 +1,9 @@
 import { ethers } from 'ethers';
 import simpleStakingABI from './SimpleStaking_ABI.json';
+import { getPermitSignature } from './erc20';
 
-// Extract the ABI array from the metadata
-const abi = JSON.parse(simpleStakingABI.metadata).output.abi;
+// Extract the ABI array
+const abi = simpleStakingABI.abi;
 
 /**
  * Deposit tokenB into the contract to provide swap liquidity
@@ -134,4 +135,73 @@ export async function getTotalStaked(contractAddress, provider) {
 export async function getTotalDeposited(contractAddress, provider) {
   const contract = new ethers.Contract(contractAddress, abi, provider);
   return await contract.totalDeposited();
+}
+
+/**
+ * Stake with permit (single signature for approve + stake)
+ * @param {string} contractAddress - SimpleStaking contract address
+ * @param {string} tokenAddress - Token address to stake
+ * @param {string} amount - Amount to stake (in wei)
+ * @param {object} signer - Ethers signer instance
+ * @returns {Promise<object>} Transaction receipt
+ */
+export async function stakeWithPermit(contractAddress, tokenAddress, amount, signer) {
+  const contract = new ethers.Contract(contractAddress, abi, signer);
+
+  // Get permit signature (no transaction, just signature)
+  const permitData = await getPermitSignature(tokenAddress, contractAddress, amount, signer);
+
+  // Call stakeWithPermit with signature parameters
+  const tx = await contract.stakeWithPermit(
+    amount,
+    permitData.deadline,
+    permitData.v,
+    permitData.r,
+    permitData.s
+  );
+  return await tx.wait();
+}
+
+/**
+ * Deposit with approve (2 transactions - no depositWithPermit in contract)
+ * @param {string} contractAddress - SimpleStaking contract address
+ * @param {string} tokenAddress - Token address to deposit
+ * @param {string} amount - Amount to deposit (in wei)
+ * @param {object} signer - Ethers signer instance
+ * @param {function} approveFunc - The approve function from erc20.js
+ * @returns {Promise<object>} Transaction receipt
+ */
+export async function depositWithApprove(contractAddress, tokenAddress, amount, signer, approveFunc) {
+  // First approve
+  await approveFunc(tokenAddress, contractAddress, amount, signer);
+
+  // Then deposit
+  const contract = new ethers.Contract(contractAddress, abi, signer);
+  const tx = await contract.deposit(amount);
+  return await tx.wait();
+}
+
+/**
+ * Swap with permit (single signature for approve + swap)
+ * @param {string} contractAddress - SimpleStaking contract address
+ * @param {string} tokenAddress - Token address to swap
+ * @param {string} amount - Amount to swap (in wei)
+ * @param {object} signer - Ethers signer instance
+ * @returns {Promise<object>} Transaction receipt
+ */
+export async function swapWithPermit(contractAddress, tokenAddress, amount, signer) {
+  const contract = new ethers.Contract(contractAddress, abi, signer);
+
+  // Get permit signature (no transaction, just signature)
+  const permitData = await getPermitSignature(tokenAddress, contractAddress, amount, signer);
+
+  // Call swapWithPermit with signature parameters
+  const tx = await contract.swapWithPermit(
+    amount,
+    permitData.deadline,
+    permitData.v,
+    permitData.r,
+    permitData.s
+  );
+  return await tx.wait();
 }

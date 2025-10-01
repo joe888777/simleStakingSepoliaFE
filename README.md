@@ -1,6 +1,6 @@
 
 # Demo
-https://www.loom.com/share/ecf97bb0d1ce43038b3c6a8eab39cd30?sid=ee056e49-1043-4e82-922f-44d4bdce6460
+https://www.loom.com/share/8355fd4a30c84aa8a3dcda6d0a0f92ce?sid=36e9c67d-f519-4216-822e-dd4ba204b40c
 
 # Web3 Wallet & SimpleStaking dApp
 
@@ -31,7 +31,7 @@ A decentralized application (dApp) for staking, depositing, and swapping tokens 
 |----------|---------|
 | USDCT Token | `0x43501626f8B843CdA89825f4d6dB764c8c917b25` |
 | AMGT Token | `0x680fA406987E41dae6eDFc7CFeA091F990492242` |
-| SimpleStaking | `0x184E36AF6Cf168bD6D43770053d6737611E83E97` |
+| SimpleStaking | `0xF20e3C9749F1d4631ba2E1e016d6827322984957` |
 
 ## Installation
 
@@ -99,7 +99,7 @@ Ensure your wallet is connected to the Sepolia testnet
 #### **Stake Tokens**
 1. Enter the amount of AMGT to stake
 2. Click "Stake" button
-3. Approve the transaction in your wallet (2 transactions: approve + stake)
+3. Sign the permit in your wallet (1 signature using EIP-2612 permit)
 
 #### **Deposit for Liquidity**
 1. Enter the amount of AMGT to deposit
@@ -109,12 +109,12 @@ Ensure your wallet is connected to the Sepolia testnet
 #### **Withdraw Staked Tokens**
 1. Enter the amount to withdraw
 2. Click "Withdraw" button
-3. Approve the transaction in your wallet (2 transactions: approve + withdraw)
+3. Approve the transaction in your wallet (1 transaction)
 
 #### **Swap Tokens**
 1. Enter the amount of USDCT to swap for AMGT
 2. Click "Swap" button
-3. Approve the transaction in your wallet (2 transactions: approve + swap)
+3. Sign the permit in your wallet (1 signature using EIP-2612 permit)
 
 ## Project Structure
 
@@ -168,15 +168,25 @@ The SimpleStaking contract provides two main functionalities:
 
 ### Transaction Flow
 
-All write operations follow this pattern:
+Write operations use two different patterns:
 
-1. **Approve**: User approves the staking contract to spend tokens
-2. **Execute**: User executes the main transaction (stake/deposit/swap/withdraw)
+1. **Permit-based (Stake, Swap)**: Single signature using EIP-2612 permit
+   - User signs a permit message (gasless)
+   - Transaction combines permit + action in one call
 
-**Example: Staking Flow**
+2. **Approve-based (Deposit, Withdraw)**: Standard two-step flow
+   - User approves the staking contract to spend tokens
+   - User executes the main transaction
+
+**Example: Staking Flow (with Permit)**
+```
+User → Sign Permit → SimpleStaking Contract (stakeWithPermit)
+```
+
+**Example: Deposit Flow (with Approve)**
 ```
 User → Approve AMGT → SimpleStaking Contract
-User → Stake AMGT → SimpleStaking Contract
+User → Deposit AMGT → SimpleStaking Contract
 ```
 
 ### Read Operations
@@ -194,13 +204,16 @@ The app fetches real-time data:
 #### `approve(tokenAddress, spenderAddress, amount, signer)`
 Approves a spender to spend tokens.
 
+#### `getPermitSignature(tokenAddress, spenderAddress, amount, signer, deadline)`
+Generates EIP-2612 permit signature for gasless approval.
+
 ### SimpleStaking Functions
 
 #### Write Functions (Require Wallet Signature)
-- `stake(contractAddress, amount, signer)` - Stake AMGT tokens
-- `deposit(contractAddress, amount, signer)` - Deposit AMGT for liquidity
+- `stakeWithPermit(contractAddress, tokenAddress, amount, signer)` - Stake AMGT with permit (1 signature)
+- `deposit(contractAddress, amount, signer)` - Deposit AMGT for liquidity (requires approve first)
 - `withdraw(contractAddress, amount, signer)` - Withdraw staked AMGT
-- `swap(contractAddress, amount, signer)` - Swap USDCT for AMGT
+- `swapWithPermit(contractAddress, tokenAddress, amount, signer)` - Swap USDCT for AMGT with permit (1 signature)
 
 #### Read Functions (No Signature Required)
 - `getStakedBalance(contractAddress, userAddress, provider)` - Get user's staked balance
