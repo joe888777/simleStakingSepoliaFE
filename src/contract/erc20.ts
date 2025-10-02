@@ -1,15 +1,30 @@
 import { ethers } from 'ethers';
 import erc20ABI from './erc20_ABI.json';
 
+export interface PermitSignature {
+  owner: string;
+  spender: string;
+  value: ethers.BigNumber;
+  deadline: number;
+  v: number;
+  r: string;
+  s: string;
+}
+
 /**
  * Approve spender to spend tokens on behalf of the owner
- * @param {string} tokenAddress - ERC20 token contract address
- * @param {string} spenderAddress - Address to approve
- * @param {string} amount - Amount to approve (in wei or token's smallest unit)
- * @param {object} signer - Ethers signer instance
- * @returns {Promise<object>} Transaction receipt
+ * @param tokenAddress - ERC20 token contract address
+ * @param spenderAddress - Address to approve
+ * @param amount - Amount to approve (in wei or token's smallest unit)
+ * @param signer - Ethers signer instance
+ * @returns Transaction receipt
  */
-export async function approve(tokenAddress, spenderAddress, amount, signer) {
+export async function approve(
+  tokenAddress: string,
+  spenderAddress: string,
+  amount: ethers.BigNumber,
+  signer: ethers.Signer
+): Promise<ethers.ContractReceipt> {
   const contract = new ethers.Contract(tokenAddress, erc20ABI, signer);
   const tx = await contract.approve(spenderAddress, amount);
   return await tx.wait();
@@ -17,14 +32,20 @@ export async function approve(tokenAddress, spenderAddress, amount, signer) {
 
 /**
  * Approve via signature using EIP-2612 permit (gasless approval)
- * @param {string} tokenAddress - ERC20 token contract address
- * @param {string} spenderAddress - Address to approve
- * @param {string} amount - Amount to approve (in wei)
- * @param {object} signer - Ethers signer instance
- * @param {number} deadline - Unix timestamp for permit expiration (optional, defaults to 1 hour)
- * @returns {Promise<object>} Permit signature data
+ * @param tokenAddress - ERC20 token contract address
+ * @param spenderAddress - Address to approve
+ * @param amount - Amount to approve (in wei)
+ * @param signer - Ethers signer instance
+ * @param deadline - Unix timestamp for permit expiration (optional, defaults to 1 hour)
+ * @returns Permit signature data
  */
-export async function getPermitSignature(tokenAddress, spenderAddress, amount, signer, deadline) {
+export async function getPermitSignature(
+  tokenAddress: string,
+  spenderAddress: string,
+  amount: ethers.BigNumber,
+  signer: ethers.Signer,
+  deadline?: number
+): Promise<PermitSignature> {
   const contract = new ethers.Contract(tokenAddress, erc20ABI, signer);
   const owner = await signer.getAddress();
 
@@ -67,7 +88,7 @@ export async function getPermitSignature(tokenAddress, spenderAddress, amount, s
   };
 
   // Sign the permit
-  const signature = await signer._signTypedData(domain, types, value);
+  const signature = await (signer as any)._signTypedData(domain, types, value);
   const sig = ethers.utils.splitSignature(signature);
 
   return {
@@ -83,12 +104,16 @@ export async function getPermitSignature(tokenAddress, spenderAddress, amount, s
 
 /**
  * Execute permit transaction (approves via signature)
- * @param {string} tokenAddress - ERC20 token contract address
- * @param {object} permitData - Permit signature data from getPermitSignature
- * @param {object} signer - Ethers signer instance
- * @returns {Promise<object>} Transaction receipt
+ * @param tokenAddress - ERC20 token contract address
+ * @param permitData - Permit signature data from getPermitSignature
+ * @param signer - Ethers signer instance
+ * @returns Transaction receipt
  */
-export async function executePermit(tokenAddress, permitData, signer) {
+export async function executePermit(
+  tokenAddress: string,
+  permitData: PermitSignature,
+  signer: ethers.Signer
+): Promise<ethers.ContractReceipt> {
   const contract = new ethers.Contract(tokenAddress, erc20ABI, signer);
   const tx = await contract.permit(
     permitData.owner,

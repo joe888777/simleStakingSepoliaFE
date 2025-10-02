@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { ThirdwebProvider, ConnectWallet, useAddress, useSDK } from '@thirdweb-dev/react';
 import { ethers } from 'ethers';
 import { AMGTContractAddress, USDCTContractAddress, SimpleStakeContractAddress } from './setting';
-import { deposit, stake, withdraw, swap, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited, stakeWithPermit, swapWithPermit } from './contract/SimpleStaking';
+import { deposit, withdraw, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited, stakeWithPermit, swapWithPermit } from './contract/SimpleStaking';
 import { approve } from './contract/erc20';
 
 // Your smart contract configuration
@@ -16,22 +16,22 @@ const CONTRACT_ABI = [
 function WalletInteraction() {
   const address = useAddress();
   const sdk = useSDK();
-  const [contract, setContract] = useState(null);
-  const [balance, setBalance] = useState('0');
-  const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [balance, setBalance] = useState<string>('0');
+  const [recipient, setRecipient] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Staking states
-  const [stakeAmount, setStakeAmount] = useState('');
-  const [depositAmount, setDepositAmount] = useState('');
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [swapAmount, setSwapAmount] = useState('');
-  const [stakedBalance, setStakedBalance] = useState('0');
-  const [depositedBalance, setDepositedBalance] = useState('0');
-  const [totalStaked, setTotalStaked] = useState('0');
-  const [totalDeposited, setTotalDeposited] = useState('0');
-  const [stakingLoading, setStakingLoading] = useState(false);
+  const [stakeAmount, setStakeAmount] = useState<string>('');
+  const [depositAmount, setDepositAmount] = useState<string>('');
+  const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+  const [swapAmount, setSwapAmount] = useState<string>('');
+  const [stakedBalance, setStakedBalance] = useState<string>('0');
+  const [depositedBalance, setDepositedBalance] = useState<string>('0');
+  const [totalStaked, setTotalStaked] = useState<string>('0');
+  const [totalDeposited, setTotalDeposited] = useState<string>('0');
+  const [stakingLoading, setStakingLoading] = useState<boolean>(false);
 
   // Initialize contract with ethers.js
   useEffect(() => {
@@ -110,7 +110,7 @@ function WalletInteraction() {
       setAmount('');
     } catch (error) {
       console.error('Transfer error:', error);
-      alert('Transfer failed: ' + error.message);
+      alert('Transfer failed: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -123,6 +123,7 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
+      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(stakeAmount);
 
       // Use permit for single signature approval + stake
@@ -133,7 +134,7 @@ function WalletInteraction() {
       fetchStakingData();
     } catch (error) {
       console.error('Stake error:', error);
-      alert('Stake failed: ' + error.message);
+      alert('Stake failed: ' + (error as Error).message);
     } finally {
       setStakingLoading(false);
     }
@@ -145,6 +146,7 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
+      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(depositAmount);
 
       // Deposit uses approve method (no depositWithPermit in contract)
@@ -156,7 +158,7 @@ function WalletInteraction() {
       fetchStakingData();
     } catch (error) {
       console.error('Deposit error:', error);
-      alert('Deposit failed: ' + error.message);
+      alert('Deposit failed: ' + (error as Error).message);
     } finally {
       setStakingLoading(false);
     }
@@ -168,6 +170,7 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
+      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(withdrawAmount);
 
       await withdraw(SimpleStakeContractAddress, amountWei, signer);
@@ -177,7 +180,7 @@ function WalletInteraction() {
       fetchStakingData();
     } catch (error) {
       console.error('Withdraw error:', error);
-      alert('Withdraw failed: ' + error.message);
+      alert('Withdraw failed: ' + (error as Error).message);
     } finally {
       setStakingLoading(false);
     }
@@ -189,6 +192,7 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
+      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(swapAmount);
 
       // Use permit for single signature approval + swap
@@ -199,7 +203,7 @@ function WalletInteraction() {
       fetchStakingData();
     } catch (error) {
       console.error('Swap error:', error);
-      alert('Swap failed: ' + error.message);
+      alert('Swap failed: ' + (error as Error).message);
     } finally {
       setStakingLoading(false);
     }
@@ -377,7 +381,7 @@ function WalletPage() {
   );
 }
 
-const styles = {
+const styles: { [key: string]: CSSProperties } = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
