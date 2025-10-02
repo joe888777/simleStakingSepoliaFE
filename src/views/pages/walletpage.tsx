@@ -1,16 +1,12 @@
-import { useState, useEffect, CSSProperties } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThirdwebProvider, ConnectWallet, useAddress, useSDK } from '@thirdweb-dev/react';
-import { ethers } from 'ethers';
-import { AMGTContractAddress, USDCTContractAddress, SimpleStakeContractAddress } from './setting';
-import { deposit, withdraw, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited, stakeWithPermit, swapWithPermit } from './contract/SimpleStaking';
-import { approve } from './contract/erc20';
-
-import HomePage from './HomePage';
-
+import { Contract, ethers, BigNumber } from 'ethers';
+import { AMGTContractAddress, USDCTContractAddress, SimpleStakeContractAddress } from '../../setting';
+import  {deposit, stake, withdraw, swap, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited, stakeWithPermit, swapWithPermit}  from '../../contract/SimpleStaking';
+import { approve } from '../../contract/erc20'
 // Your smart contract configuration
 const CONTRACT_ADDRESS = '0x...'; // Replace with your contract address
 const CONTRACT_ABI = [
-  // Replace with your contract ABI
   "function balanceOf(address owner) view returns (uint256)",
   "function transfer(address to, uint256 amount) returns (bool)"
 ];
@@ -18,7 +14,7 @@ const CONTRACT_ABI = [
 function WalletInteraction() {
   const address = useAddress();
   const sdk = useSDK();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
   const [balance, setBalance] = useState<string>('0');
   const [recipient, setRecipient] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
@@ -41,11 +37,7 @@ function WalletInteraction() {
       const initContract = async () => {
         try {
           const signer = await sdk.getSigner();
-          const ethersContract = new ethers.Contract(
-            CONTRACT_ADDRESS,
-            CONTRACT_ABI,
-            signer
-          );
+          const ethersContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
           setContract(ethersContract);
         } catch (error) {
           console.error('Error initializing contract:', error);
@@ -59,7 +51,7 @@ function WalletInteraction() {
   const fetchBalance = async () => {
     if (contract && address) {
       try {
-        const bal = await contract.balanceOf(address);
+        const bal: BigNumber = await contract.balanceOf(address);
         setBalance(ethers.utils.formatEther(bal));
       } catch (error) {
         console.error('Error fetching balance:', error);
@@ -76,10 +68,10 @@ function WalletInteraction() {
     if (sdk && address) {
       try {
         const provider = await sdk.getProvider();
-        const stakedBal = await getStakedBalance(SimpleStakeContractAddress, address, provider);
-        const depositedBal = await getDepositedBalance(SimpleStakeContractAddress, address, provider);
-        const total_staked = await getTotalStaked(SimpleStakeContractAddress, provider);
-        const total_deposited = await getTotalDeposited(SimpleStakeContractAddress, provider);
+        const stakedBal: BigNumber = await getStakedBalance(SimpleStakeContractAddress, address, provider);
+        const depositedBal: BigNumber = await getDepositedBalance(SimpleStakeContractAddress, address, provider);
+        const total_staked: BigNumber = await getTotalStaked(SimpleStakeContractAddress, provider);
+        const total_deposited: BigNumber = await getTotalDeposited(SimpleStakeContractAddress, provider);
 
         setStakedBalance(ethers.utils.formatEther(stakedBal));
         setDepositedBalance(ethers.utils.formatEther(depositedBal));
@@ -101,18 +93,15 @@ function WalletInteraction() {
 
     setLoading(true);
     try {
-      const tx = await contract.transfer(
-        recipient,
-        ethers.utils.parseEther(amount)
-      );
+      const tx = await contract.transfer(recipient, ethers.utils.parseEther(amount));
       await tx.wait();
       alert('Transfer successful!');
       fetchBalance();
       setRecipient('');
       setAmount('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Transfer error:', error);
-      alert('Transfer failed: ' + (error as Error).message);
+      alert('Transfer failed: ' + (error?.message || error));
     } finally {
       setLoading(false);
     }
@@ -125,18 +114,15 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
-      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(stakeAmount);
-
-      // Use permit for single signature approval + stake
       await stakeWithPermit(SimpleStakeContractAddress, AMGTContractAddress, amountWei, signer);
 
       alert('Stake successful!');
       setStakeAmount('');
       fetchStakingData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Stake error:', error);
-      alert('Stake failed: ' + (error as Error).message);
+      alert('Stake failed: ' + (error?.message || error));
     } finally {
       setStakingLoading(false);
     }
@@ -148,19 +134,17 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
-      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(depositAmount);
 
-      // Deposit uses approve method (no depositWithPermit in contract)
       await approve(AMGTContractAddress, SimpleStakeContractAddress, amountWei, signer);
       await deposit(SimpleStakeContractAddress, amountWei, signer);
 
       alert('Deposit successful!');
       setDepositAmount('');
       fetchStakingData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Deposit error:', error);
-      alert('Deposit failed: ' + (error as Error).message);
+      alert('Deposit failed: ' + (error?.message || error));
     } finally {
       setStakingLoading(false);
     }
@@ -172,7 +156,6 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
-      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(withdrawAmount);
 
       await withdraw(SimpleStakeContractAddress, amountWei, signer);
@@ -180,9 +163,9 @@ function WalletInteraction() {
       alert('Withdraw successful!');
       setWithdrawAmount('');
       fetchStakingData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Withdraw error:', error);
-      alert('Withdraw failed: ' + (error as Error).message);
+      alert('Withdraw failed: ' + (error?.message || error));
     } finally {
       setStakingLoading(false);
     }
@@ -194,18 +177,16 @@ function WalletInteraction() {
     setStakingLoading(true);
     try {
       const signer = await sdk.getSigner();
-      if (!signer) throw new Error('No signer available');
       const amountWei = ethers.utils.parseEther(swapAmount);
 
-      // Use permit for single signature approval + swap
       await swapWithPermit(SimpleStakeContractAddress, USDCTContractAddress, amountWei, signer);
 
       alert('Swap successful!');
       setSwapAmount('');
       fetchStakingData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Swap error:', error);
-      alert('Swap failed: ' + (error as Error).message);
+      alert('Swap failed: ' + (error?.message || error));
     } finally {
       setStakingLoading(false);
     }
@@ -283,7 +264,6 @@ function WalletInteraction() {
           </div>
 
           <div style={styles.actionGrid}>
-            {/* Stake Section */}
             <div style={styles.actionCard}>
               <h3>Stake Tokens</h3>
               <input
@@ -302,7 +282,6 @@ function WalletInteraction() {
               </button>
             </div>
 
-            {/* Deposit Section */}
             <div style={styles.actionCard}>
               <h3>Deposit for Liquidity</h3>
               <input
@@ -321,7 +300,6 @@ function WalletInteraction() {
               </button>
             </div>
 
-            {/* Withdraw Section */}
             <div style={styles.actionCard}>
               <h3>Withdraw Staked</h3>
               <input
@@ -340,7 +318,6 @@ function WalletInteraction() {
               </button>
             </div>
 
-            {/* Swap Section */}
             <div style={styles.actionCard}>
               <h3>Swap TokenA → TokenB</h3>
               <input
@@ -362,7 +339,7 @@ function WalletInteraction() {
 
           <button
             onClick={fetchStakingData}
-            style={{...styles.button, marginTop: '20px'}}
+            style={{ ...styles.button, marginTop: '20px' }}
           >
             Refresh Staking Data
           </button>
@@ -376,61 +353,59 @@ function WalletPage() {
   return (
     <ThirdwebProvider
       activeChain="sepolia"
-      clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID}
+      clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID as string}
     >
-      {/* <WalletInteraction /> */}
-      <HomePage/>
-      {/* {`${process.env.VITE_APP_API_URL_LOCAL}`} */}
+      <WalletInteraction />
     </ThirdwebProvider>
   );
 }
 
-const styles: { [key: string]: CSSProperties } = {
+const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    maxWidth: '1200px',
+    maxWidth: 1200,
     margin: '0 auto',
-    padding: '40px 20px',
+    padding: 40,
     fontFamily: 'Arial, sans-serif',
   },
   walletSection: {
-    marginBottom: '30px',
-    padding: '20px',
+    marginBottom: 30,
+    padding: 20,
     border: '1px solid #ddd',
-    borderRadius: '8px',
+    borderRadius: 8,
   },
   infoSection: {
-    marginBottom: '30px',
-    padding: '20px',
+    marginBottom: 30,
+    padding: 20,
     backgroundColor: '#f5f5f5',
-    borderRadius: '8px',
+    borderRadius: 8,
   },
   interactionSection: {
-    marginBottom: '30px',
-    padding: '20px',
+    marginBottom: 30,
+    padding: 20,
     border: '1px solid #ddd',
-    borderRadius: '8px',
+    borderRadius: 8,
   },
   stakingSection: {
-    padding: '20px',
+    padding: 20,
     border: '2px solid #007bff',
-    borderRadius: '8px',
+    borderRadius: 8,
     backgroundColor: '#f0f8ff',
   },
   balanceGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '15px',
-    marginBottom: '30px',
+    gap: 15,
+    marginBottom: 30,
   },
   balanceCard: {
-    padding: '15px',
+    padding: 15,
     backgroundColor: '#fff',
     border: '1px solid #ddd',
-    borderRadius: '8px',
+    borderRadius: 8,
     textAlign: 'center',
   },
   balanceValue: {
-    fontSize: '20px',
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#28a745',
     margin: '10px 0 0 0',
@@ -438,34 +413,34 @@ const styles: { [key: string]: CSSProperties } = {
   actionGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '20px',
-    marginBottom: '20px',
+    gap: 20,
+    marginBottom: 20,
   },
   actionCard: {
-    padding: '20px',
+    padding: 20,
     backgroundColor: '#fff',
     border: '1px solid #ddd',
-    borderRadius: '8px',
+    borderRadius: 8,
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '15px',
+    gap: 15,
   },
   input: {
-    padding: '12px',
-    fontSize: '16px',
+    padding: 12,
+    fontSize: 16,
     border: '1px solid #ddd',
-    borderRadius: '4px',
-    marginBottom: '10px',
+    borderRadius: 4,
+    marginBottom: 10,
   },
   button: {
     padding: '12px 24px',
-    fontSize: '16px',
+    fontSize: 16,
     backgroundColor: '#007bff',
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: 4,
     cursor: 'pointer',
   },
 };
