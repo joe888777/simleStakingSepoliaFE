@@ -27,7 +27,7 @@ const flattenMenuItems = (items: MenuItemType[]): MenuItemType[] =>
     return acc;
   }, []);
 
-const HomePage: React.FC = () => {
+const AmgPage: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem("authToken"));
   const [username, setUsername] = useState<string | null>(localStorage.getItem("username"));
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
@@ -89,4 +89,4 @@ const HomePage: React.FC = () => {
   );
 };
 
-export default HomePage;
+export default AmgPage;

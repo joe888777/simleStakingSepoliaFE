@@ -5,7 +5,7 @@ import { AMGTContractAddress, USDCTContractAddress, SimpleStakeContractAddress }
 import { deposit, withdraw, getStakedBalance, getDepositedBalance, getTotalStaked, getTotalDeposited, stakeWithPermit, swapWithPermit } from './contract/SimpleStaking';
 import { approve } from './contract/erc20';
 
-import HomePage from './HomePage';
+import AmgPage from './AmgPage';
 
 // Your smart contract configuration
 const CONTRACT_ADDRESS = '0x...'; // Replace with your contract address
@@ -379,7 +379,7 @@ function WalletPage() {
       clientId={import.meta.env.VITE_THIRDWEB_CLIENT_ID}
     >
       {/* <WalletInteraction /> */}
-      <HomePage/>
+      <AmgPage/>
       {/* {`${process.env.VITE_APP_API_URL_LOCAL}`} */}
     </ThirdwebProvider>
   );

@@ -9,7 +9,12 @@ import {
   Tabs,
   Tab,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
 } from '@mui/material';
+import { CheckCircle, Close } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axiosInstance';
 import { useSDK, useAddress } from '@thirdweb-dev/react';
@@ -48,6 +53,7 @@ const InvestmentDetailPage: React.FC = () => {
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [stakingLoading, setStakingLoading] = useState(false);
   const [totalStaked, setTotalStaked] = useState<string>('0');
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   const location = useLocation();
   const { planID } = location.state || {};
@@ -75,7 +81,7 @@ const InvestmentDetailPage: React.FC = () => {
       // Use permit for single signature approval + stake
       await stakeWithPermit(SimpleStakeContractAddress, AMGTContractAddress, amountWei, signer);
 
-      alert('Investment successful!');
+      setSuccessModalOpen(true);
       setInvestmentAmount('');
     } catch (error) {
       console.error('Investment error:', error);
@@ -215,9 +221,9 @@ const InvestmentDetailPage: React.FC = () => {
             </Card>
 
             <Card sx={{ bgcolor: '#111', color: '#e3c78b', p: 2, borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography sx={{ fontWeight: 500, fontSize: '0.95rem' }}>AUM (Total Staked)</Typography>
+              <Typography sx={{ fontWeight: 500, fontSize: '0.95rem' }}>AUM</Typography>
               <Typography sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                {totalStaked ? `${parseFloat(totalStaked).toLocaleString()} AMGT` : 'Loading...'}
+                {totalStaked ? `$${parseFloat(totalStaked).toLocaleString()} USD` : 'Loading...'}
               </Typography>
             </Card>
           </Box>
@@ -265,11 +271,33 @@ const InvestmentDetailPage: React.FC = () => {
               <Button
                 fullWidth
                 variant="contained"
-                sx={{ bgcolor: '#e3c78b', color: '#000', mt: 1, '&:hover': { bgcolor: '#d4b86b' }, fontSize: '1rem', fontWeight: 600 }}
+                sx={{
+                  bgcolor: '#e3c78b',
+                  color: '#000',
+                  mt: 1,
+                  '&:hover': { bgcolor: '#d4b86b' },
+                  '&:disabled': { bgcolor: '#555', color: '#999' },
+                  fontSize: '1rem',
+                  fontWeight: 600
+                }}
                 onClick={handleInvest}
-                disabled={stakingLoading || !address}
+                disabled={
+                  stakingLoading ||
+                  !address ||
+                  !investmentAmount ||
+                  (planDetail?.minInvestment && parseFloat(investmentAmount) < planDetail.minInvestment)
+                }
               >
-                {stakingLoading ? 'Processing...' : address ? 'Invest' : 'Connect Wallet'}
+                {stakingLoading ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={18} sx={{ color: '#000' }} />
+                    Processing...
+                  </Box>
+                ) : !address ? 'Connect Wallet'
+                  : !investmentAmount ? 'Invest'
+                  : (planDetail?.minInvestment && parseFloat(investmentAmount) < planDetail.minInvestment)
+                    ? `Min ${planDetail.minInvestment} AMGF`
+                    : 'Invest'}
               </Button>
             </Card>
           </Box>
@@ -316,6 +344,42 @@ const InvestmentDetailPage: React.FC = () => {
           ))}
         </Box>
       </Box>
+
+      {/* Success Modal */}
+      <Dialog
+        open={successModalOpen}
+        onClose={() => setSuccessModalOpen(false)}
+        PaperProps={{
+          sx: {
+            bgcolor: '#1a1a1a',
+            color: '#fff',
+            borderRadius: 3,
+            border: '1px solid #e3c78b',
+            minWidth: 400,
+          },
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <IconButton
+            onClick={() => setSuccessModalOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8, color: '#999' }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', py: 4 }}>
+          <CheckCircle sx={{ fontSize: 80, color: '#e3c78b', mb: 2 }} />
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: '#e3c78b' }}>
+            Investment Successful!
+          </Typography>
+          <Typography sx={{ color: '#ccc', mb: 1 }}>
+            Your investment has been successfully staked.
+          </Typography>
+          <Typography sx={{ color: '#999', fontSize: '0.9rem' }}>
+            You can view your staked balance in your wallet.
+          </Typography>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

@@ -6,7 +6,13 @@ import {
   Button,
   Card,
   Container,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
 } from '@mui/material';
+import { CheckCircle, Close } from '@mui/icons-material';
 import { useSDK, useAddress } from '@thirdweb-dev/react';
 import { ethers } from 'ethers';
 import { SimpleStakeContractAddress, USDCTContractAddress } from '../../setting';
@@ -15,6 +21,7 @@ import { swapWithPermit } from '../../contract/SimpleStaking';
 const AMGTPage: React.FC = () => {
   const [swapAmount, setSwapAmount] = useState('');
   const [swapLoading, setSwapLoading] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
   const sdk = useSDK();
   const address = useAddress();
 
@@ -33,7 +40,7 @@ const AMGTPage: React.FC = () => {
       // Use permit for single signature approval + swap
       await swapWithPermit(SimpleStakeContractAddress, USDCTContractAddress, amountWei, signer);
 
-      alert('Swap successful! You received AMGT tokens.');
+      setSuccessModalOpen(true);
       setSwapAmount('');
     } catch (error) {
       console.error('Swap error:', error);
@@ -193,7 +200,12 @@ const AMGTPage: React.FC = () => {
               transition: 'all 0.3s ease',
             }}
           >
-            {swapLoading ? 'Processing...' : address ? 'Swap Now' : 'Connect Wallet'}
+            {swapLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} sx={{ color: '#000' }} />
+                Processing...
+              </Box>
+            ) : address ? 'Swap Now' : 'Connect Wallet'}
           </Button>
 
           {!address && (
@@ -228,6 +240,42 @@ const AMGTPage: React.FC = () => {
           </Typography>
         </Box>
       </Container>
+
+      {/* Success Modal */}
+      <Dialog
+        open={successModalOpen}
+        onClose={() => setSuccessModalOpen(false)}
+        PaperProps={{
+          sx: {
+            bgcolor: '#1a1a1a',
+            color: '#fff',
+            borderRadius: 3,
+            border: '1px solid #e3c78b',
+            minWidth: 400,
+          },
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <IconButton
+            onClick={() => setSuccessModalOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8, color: '#999' }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', py: 4 }}>
+          <CheckCircle sx={{ fontSize: 80, color: '#e3c78b', mb: 2 }} />
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: '#e3c78b' }}>
+            Swap Successful!
+          </Typography>
+          <Typography sx={{ color: '#ccc', mb: 1 }}>
+            You have successfully swapped USDCT for AMGT tokens.
+          </Typography>
+          <Typography sx={{ color: '#999', fontSize: '0.9rem' }}>
+            Your AMGT tokens are now in your wallet.
+          </Typography>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
