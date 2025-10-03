@@ -7,6 +7,7 @@ import AuthPage from "./views/pages/AuthPage";
 import PiaPage from "./views/pages/pia";
 import PlanDetail from "./views/pages/Plandetail";
 import AMGTPage from "./views/pages/amgt";
+import InvestmentConfirm from "./views/pages/InvestmentConfirm";
 
 const lazyComponentsMap: { [path: string]: React.LazyExoticComponent<React.FC> } = {};
 const getLazyComponent = (path: string) => {
@@ -82,6 +83,7 @@ const AmgPage: React.FC = () => {
 
         <Route path="/Plandetail" element={<PlanDetail />} />
         <Route path="/amgt" element={<AMGTPage />} />
+        <Route path="/investment-confirm" element={<InvestmentConfirm />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />

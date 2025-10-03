@@ -9,18 +9,13 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
 } from '@mui/material';
-import { CheckCircle, Close } from '@mui/icons-material';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axiosInstance';
 import { useSDK, useAddress } from '@thirdweb-dev/react';
 import { ethers } from 'ethers';
-import { AMGTContractAddress, SimpleStakeContractAddress } from '../../setting';
-import { stakeWithPermit, getTotalStaked } from '../../contract/SimpleStaking';
+import { SimpleStakeContractAddress } from '../../setting';
+import { getTotalStaked } from '../../contract/SimpleStaking';
 
 const API_BASE_URL = 'http://192.168.1.107:8081';
 
@@ -53,9 +48,9 @@ const InvestmentDetailPage: React.FC = () => {
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [stakingLoading, setStakingLoading] = useState(false);
   const [totalStaked, setTotalStaked] = useState<string>('0');
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   const location = useLocation();
+  const navigate = useNavigate();
   const { planID } = location.state || {};
   const sdk = useSDK();
   const address = useAddress();
@@ -66,29 +61,19 @@ const InvestmentDetailPage: React.FC = () => {
     if (ref) ref.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const handleInvest = async () => {
+  const handleInvestClick = () => {
     if (!sdk || !investmentAmount) {
       alert('Please connect wallet and enter amount');
       return;
     }
 
-    setStakingLoading(true);
-    try {
-      const signer = await sdk.getSigner();
-      if (!signer) throw new Error('No signer available');
-      const amountWei = ethers.utils.parseEther(investmentAmount);
-
-      // Use permit for single signature approval + stake
-      await stakeWithPermit(SimpleStakeContractAddress, AMGTContractAddress, amountWei, signer);
-
-      setSuccessModalOpen(true);
-      setInvestmentAmount('');
-    } catch (error) {
-      console.error('Investment error:', error);
-      alert('Investment failed: ' + (error as Error).message);
-    } finally {
-      setStakingLoading(false);
-    }
+    navigate('/investment-confirm', {
+      state: {
+        investmentAmount,
+        planID,
+        planDetailTitle: planDetail?.planDetailTitle,
+      },
+    });
   };
 
   const getPlanImageUrl = (planDetailImage: string) => {
@@ -280,7 +265,7 @@ const InvestmentDetailPage: React.FC = () => {
                   fontSize: '1rem',
                   fontWeight: 600
                 }}
-                onClick={handleInvest}
+                onClick={handleInvestClick}
                 disabled={
                   stakingLoading ||
                   !address ||
@@ -344,42 +329,6 @@ const InvestmentDetailPage: React.FC = () => {
           ))}
         </Box>
       </Box>
-
-      {/* Success Modal */}
-      <Dialog
-        open={successModalOpen}
-        onClose={() => setSuccessModalOpen(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: '#1a1a1a',
-            color: '#fff',
-            borderRadius: 3,
-            border: '1px solid #e3c78b',
-            minWidth: 400,
-          },
-        }}
-      >
-        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <IconButton
-            onClick={() => setSuccessModalOpen(false)}
-            sx={{ position: 'absolute', right: 8, top: 8, color: '#999' }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ textAlign: 'center', py: 4 }}>
-          <CheckCircle sx={{ fontSize: 80, color: '#e3c78b', mb: 2 }} />
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: '#e3c78b' }}>
-            Investment Successful!
-          </Typography>
-          <Typography sx={{ color: '#ccc', mb: 1 }}>
-            Your investment has been successfully staked.
-          </Typography>
-          <Typography sx={{ color: '#999', fontSize: '0.9rem' }}>
-            You can view your staked balance in your wallet.
-          </Typography>
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 };
